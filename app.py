@@ -2,6 +2,11 @@ import streamlit as st # for frontend
 from dotenv import load_dotenv # for loading .env variables
 from PyPDF2 import PdfReader # for getting raw text from PDFs
 from langchain.text_splitter import CharacterTextSplitter # for getting chunks of texts from raw text
+#from langchain.embeddings import HuggingFaceInstructEmbeddings
+from langchain_community.embeddings import HuggingFaceInstructEmbeddings
+#from langchain.embeddings import 
+from langchain_community.vectorstores import FAISS
+import torch
 
 def get_raw_text(docs):
     raw_text = ""
@@ -16,6 +21,10 @@ def get_text_chunks(raw_text):
     chunks = text_splitter.split_text(raw_text)
     return chunks
 
+def get_vector_store(chunks):
+    embeddings = HuggingFaceInstructEmbeddings(model_name = "hkunlp/instructor-xl")
+    vector_store = FAISS.from_texts(texts=chunks, embedding=embeddings)
+    return vector_store
 
 def main():
     load_dotenv() # loading .env variables
@@ -28,14 +37,9 @@ def main():
         button = st.button("Process")
         if button: # button pressed
             with st.spinner("Processing....."): # a spinner for processing
-                # extract raw text from pdf
-                raw_text = get_raw_text(docs)
-                
-                # divide raw text into chunks
-                chunks = get_text_chunks(raw_text)
-                #st.write(chunks)
-                
-                # store in vector database
+                raw_text = get_raw_text(docs) # extract raw text from pdf
+                chunks = get_text_chunks(raw_text) # divide raw text into chunks
+                vector_store = get_vector_store(chunks)# store in vector database
 if __name__ == '__main__':
     main()
     
