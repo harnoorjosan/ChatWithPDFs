@@ -15,9 +15,12 @@ from langchain.llms.huggingface_hub import HuggingFaceHub
 
 def get_raw_text(docs):
     raw_text = ""
-    for doc in docs: # looping over each PDF
-        pdf_reader = PdfReader(doc) # PdfReader can extract pages
-        for page in pdf_reader.pages: # looping over each page
+    # looping over each PDF
+    for doc in docs: 
+        # PdfReader can extract pages
+        pdf_reader = PdfReader(doc) 
+        # looping over each page
+        for page in pdf_reader.pages: 
             raw_text += page.extract_text()
     return raw_text
 
@@ -39,8 +42,10 @@ def get_convo_chain(vector_store):
 
 
 def main():
-    load_dotenv() # loading .env variables
-    st.set_page_config(page_title="Chat with PDFs", page_icon=":books:") # ":xxxx:" is used for emojis
+    # loading .env variables
+    load_dotenv() 
+    # ":xxxx:" is used for emojis
+    st.set_page_config(page_title="Chat with PDFs", page_icon=":books:") 
     st.header("Chat with PDFs :books:")
     st.text_input("Type your question here....")
 
@@ -49,15 +54,21 @@ def main():
 
     with st.sidebar:
         st.subheader("Your PDFs")
-        docs = st.file_uploader("Upload PDFs here", accept_multiple_files=True)  # accept multiple docs
+        # accept multiple docs
+        docs = st.file_uploader("Upload PDFs here", accept_multiple_files=True)  
         button = st.button("Process")
-        if button: # button pressed
-            with st.spinner("Processing....."): # a spinner for processing
-                raw_text = get_raw_text(docs) # extract raw text from pdf
-                chunks = get_text_chunks(raw_text) # divide raw text into chunks
-                vector_store = get_vector_store(chunks)# store in vector database
+        # button pressed
+        if button: 
+            # a spinner for processing
+            with st.spinner("Processing....."): 
+                 # extract raw text from pdf
+                raw_text = get_raw_text(docs)
+                # divide raw text into chunks
+                chunks = get_text_chunks(raw_text) 
+                # store in vector database
+                vector_store = get_vector_store(chunks)
                 #st.session_state will bind the convo to chat therefore will stay persistent. Streamlit otw loads the code whenever there is an action and the convo will lose
-                st.session_state.convo_chain = get_convo_chain(vector_store)# start a conversation chain
+                st.session_state.convo_chain = get_convo_chain(vector_store)  # start a conversation chain
 
 
 if __name__ == '__main__':
