@@ -4,6 +4,7 @@ from PyPDF2 import PdfReader # for getting raw text from PDFs
 from langchain.text_splitter import CharacterTextSplitter # for getting chunks of texts from raw text
 #from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain_community.embeddings import HuggingFaceInstructEmbeddings
+from langchain_community.embeddings.openai import OpenAIEmbeddings
 #from langchain.embeddings import 
 from langchain_community.vectorstores import FAISS
 import torch
@@ -12,6 +13,7 @@ from langchain.chains.conversational_retrieval.base import ConversationalRetriev
 from langchain.chat_models.openai import ChatOpenAI
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain.llms.huggingface_hub import HuggingFaceHub
+from htmlTemplate import css, bot_template, user_template
 
 def get_raw_text(docs):
     raw_text = ""
@@ -30,27 +32,40 @@ def get_text_chunks(raw_text):
     return chunks
 
 def get_vector_store(chunks):
-    embeddings = HuggingFaceInstructEmbeddings(model_name = "hkunlp/instructor-xl")
+    #embeddings = HuggingFaceInstructEmbeddings(model_name = "hkunlp/instructor-xl")
+    embeddings = OpenAIEmbeddings()
     vector_store = FAISS.from_texts(texts=chunks, embedding=embeddings)
     return vector_store
 
 def get_convo_chain(vector_store):
-    llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_lenght":512})
+    llm = ChatOpenAI()
+    #llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_lenght":512})
     memory = ConversationBufferMemory(memory_key="chat history", return_messages=True)
     convo_chain = ConversationalRetrievalChain.from_llm(llm=llm, retriever=vector_store.as_retriever(), memory=memory)
     return convo_chain
 
+def handle_question(question):
+    response = st.session_state.convo_chain({'question': question})
+    st.write(response)
 
 def main():
     # loading .env variables
     load_dotenv() 
     # ":xxxx:" is used for emojis
     st.set_page_config(page_title="Chat with PDFs", page_icon=":books:") 
+    st.write(css, unsafe_allow_html=True)
     st.header("Chat with PDFs :books:")
-    st.text_input("Type your question here....")
-
     if "conversation" not in st.session_state:
         st.session_state.convo_chain =  None
+
+    question = st.text_input("Type your question here....")
+    if question:
+        handle_question(question)
+
+   
+
+    st.write(user_template.replace("{{MSG}}", "Hello bot!"), unsafe_allow_html=True)
+    st.write(bot_template.replace("{{MSG}}", "Hello human!"), unsafe_allow_html=True)
 
     with st.sidebar:
         st.subheader("Your PDFs")
