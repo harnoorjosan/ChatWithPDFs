@@ -1,18 +1,22 @@
-import streamlit as st # for frontend
+# using streamlit for frontend, PyPDF for PDF reading
+import streamlit as st 
+from PyPDF2 import PdfReader
 from dotenv import load_dotenv # for loading .env variables
-from PyPDF2 import PdfReader # for getting raw text from PDFs
+# using langchain for intergrating LLMs 
 from langchain.text_splitter import CharacterTextSplitter # for getting chunks of texts from raw text
-#from langchain.embeddings import HuggingFaceInstructEmbeddings
+# Uncomment the following chunk if using HuggingFace
+'''from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain_community.embeddings import HuggingFaceInstructEmbeddings
+from langchain_community.chat_models.huggingface import ChatHuggingFace
+from langchain.llms.huggingface_hub import HuggingFaceHub'''
+# For OpenAI
 from langchain_community.embeddings.openai import OpenAIEmbeddings
-#from langchain.embeddings import 
+from langchain.chat_models.openai import ChatOpenAI
+# using vector store as numerical database (binary)
 from langchain_community.vectorstores import FAISS
 import torch
 from langchain.memory import ConversationBufferMemory
-from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
-from langchain.chat_models.openai import ChatOpenAI
-from langchain_community.chat_models.huggingface import ChatHuggingFace
-from langchain.llms.huggingface_hub import HuggingFaceHub
+from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain 
 from htmlTemplate import css, bot_template, user_template
 
 def get_raw_text(docs):
@@ -27,6 +31,8 @@ def get_raw_text(docs):
     return raw_text
 
 def get_text_chunks(raw_text):
+    # each chunk of 1000 words
+    # every new chunk will 200 words from previous chunk so no information is lost
     text_splitter = CharacterTextSplitter(separator="\n", chunk_size = 1000, chunk_overlap = 200, length_function = len)
     chunks = text_splitter.split_text(raw_text)
     return chunks
@@ -38,7 +44,7 @@ def get_vector_store(chunks):
     return vector_store
 
 def get_convo_chain(vector_store):
-    llm = ChatOpenAI()
+    llm = ChatOpenAI() # OpenAI LLM
     #llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_lenght":512})
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     convo_chain = ConversationalRetrievalChain.from_llm(llm=llm, retriever=vector_store.as_retriever(), memory=memory)
@@ -46,11 +52,14 @@ def get_convo_chain(vector_store):
 
 def handle_question(question):
     response = st.session_state.convo_chain({'question': question})
-    #st.write(response)
     st.session_state.chat_history = response['chat_history']
-    for i, message in enumerate(st.session_state.chat_history):
-        if i%2 == 0: # odd numbers of the history ie what the question is
+
+    # looking over each message and its index of chat history
+    for i, message in enumerate(st.session_state.chat_history): 
+        # if odd index of the history, put user question in the template
+        if i%2 == 0: 
             st.write(user_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
+        # if even index of the history, put bot answer in the template
         else:
             st.write(bot_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
 
@@ -68,6 +77,7 @@ def main():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history =  None
 
+    # Taking user question
     question = st.text_input("Type your question here....")
     if question:
         handle_question(question)
